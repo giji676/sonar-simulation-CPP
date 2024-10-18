@@ -44,7 +44,7 @@ private:
   }
 
   float acceleration(const WaterCell &h, int i, int j) const {
-    if ((i > WIDTH-1) || (i < 0) || (j > HEIGHT-1) || (j < 0)) {
+    if ((i <= -1) || (i >= WIDTH) || (j <= -1) || (j >= HEIGHT)) {
       return 0.0f;
     }
     const WaterCell &o = cell[index(i, j)];
@@ -64,6 +64,12 @@ public:
       for (int j = 0; j < HEIGHT; ++j) {
         WaterCell &h = cell[index(i, j)];
         if (h.wet > 0.0f) {
+          /*
+          float acc1 = acceleration(h, i, j + 1);
+          float acc2 = acceleration(h, i, j - 1);
+          float acc3 = acceleration(h, i + 1, j);
+          float acc4 = acceleration(h, i - 1, j);
+          */
           h.acc = k * (acceleration(h, i, j + 1) + acceleration(h, i, j - 1) +
                        acceleration(h, i - 1, j) + acceleration(h, i + 1, j));
         }
