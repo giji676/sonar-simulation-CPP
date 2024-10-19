@@ -1,8 +1,8 @@
 #include "raylib.h"
 #include "waterpool.hpp"
-#include <iostream>
 #include <cmath>
 #include <cstdio>
+#include <iostream>
 #include <string>
 
 const int WIDTH = 250;
@@ -35,7 +35,6 @@ struct RenderContext {
       return WHITE;
 
     float g = 128.0f * (cell.pos + 1.0f);
-      std::cout << g << std::endl;
     if (g != 128.0f && g != 128) {
     }
     if (g > 255.0f)
