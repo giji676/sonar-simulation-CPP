@@ -35,7 +35,9 @@ struct RenderContext {
       return WHITE;
 
     float g = 128.0f * (cell.pos + 1.0f);
-
+      std::cout << g << std::endl;
+    if (g != 128.0f && g != 128) {
+    }
     if (g > 255.0f)
       g = 255.0f;
     else if (g < 0.0f)
@@ -84,7 +86,7 @@ int main(int argc, const char *argv[]) {
     Vector2 mouse = GetMousePosition();
     if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
       pool.getCell(mouse.x / PIXELS_PER_CELL, mouse.y / PIXELS_PER_CELL).vel =
-          50000.0f;
+          5000.0f;
     }
     render.draw(pool);
     EndDrawing();
