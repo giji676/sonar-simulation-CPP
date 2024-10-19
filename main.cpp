@@ -9,13 +9,12 @@ const float PI_F = 3.14159265358979f;
 
 const float REFL_COEF = 0.7; // Reflection coeficient
 // Gamma - used for absorbing walls
-const float G = (1 - REFL_COEF) / (1 + REFL_COEF);
-const float LF = 0.5 * sqrt(0.5) * G; // Loss factor
-
-const float C = 343;   // Speed of sound constant
-const int FPS = 60;
-const float DT = 1.0/FPS;
-const float DX = C*DT*1.01; // calculate the minimum and add 1% just in case  // dt <= dx/C | dx >= C*dt ~~ 2.86
+const float G = (1 - REFL_COEF) / (1 + REFL_COEF); const float LF = 0.5 * sqrt(0.5) * G; // Loss factor
+const float C = 343; // Speed of sound constant
+const int FPS = 120;
+const float DT = 1.0 / FPS;
+const float DX = C * DT * 1.01; // calculate the minimum and add 1% just in case
+                                // // dt <= dx/C | dx >= C*dt ~~ 2.86
 const int WIDTH = 100; // Model assumes 100x100 represents 1m x 1m area irl
 const int HEIGHT = 100;
 const int PIXELS_PER_CELL = 6;
@@ -28,8 +27,8 @@ struct Cell {
 };
 
 std::vector<std::vector<Cell>> grid(HEIGHT, std::vector<Cell>(WIDTH));
-std::vector<std::vector<Cell>> prev_grid = grid;
-std::vector<std::vector<Cell>> next_grid = grid;
+std::vector<std::vector<Cell>> prev_grid;
+std::vector<std::vector<Cell>> next_grid;
 
 void assign_initial_state() {
   grid[static_cast<int>(HEIGHT - 1)][static_cast<int>(WIDTH / 2 - 2)].u = 2.0;
@@ -104,8 +103,8 @@ Color get_color(Cell cell, float max_val) {
   Color color;
   if (cell.wall) {
     color.r = 255; // Red
-    color.g = 0;   // Green
-    color.b = 0;   // Blue
+    color.g = 255; // Green
+    color.b = 255; // Blue
     color.a = 255; // Alpha (fully opaque)
   } else {
     float cval = cell.u;
@@ -123,11 +122,79 @@ Color get_color(Cell cell, float max_val) {
   return color;
 }
 
+std::vector<std::pair<int, int>> bresenham_line(int x0, int y0, int x1,
+                                                int y1) {
+  std::vector<std::pair<int, int>> points;
+  int dx = abs(x1 - x0);
+  int dy = abs(y1 - y0);
+  int sx = (x0 < x1) ? 1 : -1;
+  int sy = (y0 < y1) ? 1 : -1;
+  int err = dx - dy;
+
+  while (true) {
+    points.push_back(
+        std::make_pair(x0, y0)); // Add the current point to the list
+    if (x0 == x1 && y0 == y1) {  // If we've reached the end point, stop
+      break;
+    }
+    int e2 = 2 * err;
+    if (e2 > -dy) {
+      err -= dy;
+      x0 += sx;
+    }
+    if (e2 < dx) {
+      err += dx;
+      y0 += sy;
+    }
+  }
+
+  return points;
+}
+
+void set_wall_cells(std::vector<std::vector<Cell>> &grid,
+                    const std::vector<std::pair<int, int>> &wall_line_list) {
+  for (size_t i = 0; i < wall_line_list.size() - 1; ++i) {
+    int x0 = wall_line_list[i].first;
+    int y0 = wall_line_list[i].second;
+    int x1 = wall_line_list[i + 1].first;
+    int y1 = wall_line_list[i + 1].second;
+
+    // Generate all points between these two coordinates
+    std::vector<std::pair<int, int>> line_points =
+        bresenham_line(x0, y0, x1, y1);
+
+    // Set the corresponding cells in the grid as walls
+    for (const auto &point : line_points) {
+      int x = point.first;
+      int y = point.second;
+
+      // Check if coordinates are within grid bounds
+      if (x >= 0 && x < grid[0].size() && y >= 0 && y < grid.size()) {
+        grid[y][x].wall = true;
+      }
+    }
+  }
+}
+
 int main() {
   RenderContext render;
 
   InitWindow(render.screenWidth, render.screenHeight, "Sonar simulation");
   SetTargetFPS(FPS);
+
+  std::vector<std::pair<int, int>> wall_line_list = {
+      {static_cast<int>(WIDTH / 2 - 7), static_cast<int>(HEIGHT - 20)},
+      {static_cast<int>(WIDTH / 2 - 5), static_cast<int>(HEIGHT - 10)},
+      {static_cast<int>(WIDTH / 2 - 5), static_cast<int>(HEIGHT + 0)},
+      {static_cast<int>(WIDTH / 2 + 5), static_cast<int>(HEIGHT + 0)},
+      {static_cast<int>(WIDTH / 2 + 5), static_cast<int>(HEIGHT - 10)},
+      {static_cast<int>(WIDTH / 2 + 7), static_cast<int>(HEIGHT - 20)},
+  };
+
+  set_wall_cells(grid, wall_line_list);
+  prev_grid = grid;
+  next_grid = grid;
+
   assign_initial_state();
 
   while (!WindowShouldClose()) {
