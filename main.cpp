@@ -19,6 +19,9 @@ const int WIDTH = 100; // Model assumes 100x100 represents 1m x 1m area irl
 const int HEIGHT = 100;
 const int PIXELS_PER_CELL = 6;
 
+const float PULSE_FREQ = 440.0f; // Frequency in Hz (for example, 440Hz = A4 note)
+const float AMPLITUDE = 2.0f;    // Amplitude of the pulse
+
 struct Cell {
   float u;
   bool wall;
@@ -51,6 +54,13 @@ void assign_initial_state() {
   grid[static_cast<int>(HEIGHT - 5)][static_cast<int>(WIDTH / 2 + 0)].u = -2.0;
   grid[static_cast<int>(HEIGHT - 5)][static_cast<int>(WIDTH / 2 + 1)].u = -2.0;
   grid[static_cast<int>(HEIGHT - 5)][static_cast<int>(WIDTH / 2 + 2)].u = -2.0;
+}
+
+void apply_pulse(float time) {
+    float pulse = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time);
+
+    // Apply the pulse to a small region in the grid (as a point source)
+    grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 + 0)].u = pulse;
 }
 
 struct RenderContext {
@@ -195,9 +205,14 @@ int main() {
   prev_grid = grid;
   next_grid = grid;
 
-  assign_initial_state();
+  //assign_initial_state();
+  float time = 0.0;
 
   while (!WindowShouldClose()) {
+    float dt = GetFrameTime();
+    time += dt;
+    apply_pulse(time);
+
     for (int y = 1; y < HEIGHT - 1; ++y) {
       for (int x = 1; x < WIDTH - 1; ++x) {
         int k = 4;
