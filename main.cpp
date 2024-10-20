@@ -9,17 +9,19 @@ const float PI_F = 3.14159265358979f;
 
 const float REFL_COEF = 0.7; // Reflection coeficient
 // Gamma - used for absorbing walls
-const float G = (1 - REFL_COEF) / (1 + REFL_COEF); const float LF = 0.5 * sqrt(0.5) * G; // Loss factor
+const float G = (1 - REFL_COEF) / (1 + REFL_COEF);
+const float LF = 0.5 * sqrt(0.5) * G; // Loss factor
 const float C = 343; // Speed of sound constant
-const int FPS = 120;
+const int FPS = 10;
 const float DT = 1.0 / FPS;
-const float DX = C * DT * 1.01; // calculate the minimum and add 1% just in case
+// const float DX = C * DT * 1.01; // calculate the minimum and add 1% just in case
+const float DX = (C * DT)/(sqrt(0.5)); // calculate the minimum and add 1% just in case
                                 // // dt <= dx/C | dx >= C*dt ~~ 2.86
 const int WIDTH = 100; // Model assumes 100x100 represents 1m x 1m area irl
 const int HEIGHT = 100;
 const int PIXELS_PER_CELL = 6;
 
-const float PULSE_FREQ = 440.0f; // Frequency in Hz (for example, 440Hz = A4 note)
+const float PULSE_FREQ = 1.5f; // Frequency in Hz (for example, 440Hz = A4 note)
 const float AMPLITUDE = 2.0f;    // Amplitude of the pulse
 
 struct Cell {
@@ -33,34 +35,31 @@ std::vector<std::vector<Cell>> grid(HEIGHT, std::vector<Cell>(WIDTH));
 std::vector<std::vector<Cell>> prev_grid;
 std::vector<std::vector<Cell>> next_grid;
 
-void assign_initial_state() {
-  grid[static_cast<int>(HEIGHT - 1)][static_cast<int>(WIDTH / 2 - 2)].u = 2.0;
-  grid[static_cast<int>(HEIGHT - 1)][static_cast<int>(WIDTH / 2 - 1)].u = 2.0;
-  grid[static_cast<int>(HEIGHT - 1)][static_cast<int>(WIDTH / 2 + 0)].u = 2.0;
-  grid[static_cast<int>(HEIGHT - 1)][static_cast<int>(WIDTH / 2 + 1)].u = 2.0;
-  grid[static_cast<int>(HEIGHT - 1)][static_cast<int>(WIDTH / 2 + 2)].u = 2.0;
-  grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 - 2)].u = 2.0;
-  grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 - 1)].u = 2.0;
-  grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 + 0)].u = 2.0;
-  grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 + 1)].u = 2.0;
-  grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 + 2)].u = 2.0;
-  grid[static_cast<int>(HEIGHT - 4)][static_cast<int>(WIDTH / 2 - 2)].u = -2.0;
-  grid[static_cast<int>(HEIGHT - 4)][static_cast<int>(WIDTH / 2 - 1)].u = -2.0;
-  grid[static_cast<int>(HEIGHT - 4)][static_cast<int>(WIDTH / 2 + 0)].u = -2.0;
-  grid[static_cast<int>(HEIGHT - 4)][static_cast<int>(WIDTH / 2 + 1)].u = -2.0;
-  grid[static_cast<int>(HEIGHT - 4)][static_cast<int>(WIDTH / 2 + 2)].u = -2.0;
-  grid[static_cast<int>(HEIGHT - 5)][static_cast<int>(WIDTH / 2 - 2)].u = -2.0;
-  grid[static_cast<int>(HEIGHT - 5)][static_cast<int>(WIDTH / 2 - 1)].u = -2.0;
-  grid[static_cast<int>(HEIGHT - 5)][static_cast<int>(WIDTH / 2 + 0)].u = -2.0;
-  grid[static_cast<int>(HEIGHT - 5)][static_cast<int>(WIDTH / 2 + 1)].u = -2.0;
-  grid[static_cast<int>(HEIGHT - 5)][static_cast<int>(WIDTH / 2 + 2)].u = -2.0;
-}
+std::vector<std::pair<int, int>> wall_line_list = {
+    {static_cast<int>(WIDTH / 2 - 7), static_cast<int>(HEIGHT - 20)},
+    {static_cast<int>(WIDTH / 2 - 5), static_cast<int>(HEIGHT - 10)},
+    {static_cast<int>(WIDTH / 2 - 5), static_cast<int>(HEIGHT + 0)},
+    {static_cast<int>(WIDTH / 2 + 5), static_cast<int>(HEIGHT + 0)},
+    {static_cast<int>(WIDTH / 2 + 5), static_cast<int>(HEIGHT - 10)},
+    {static_cast<int>(WIDTH / 2 + 7), static_cast<int>(HEIGHT - 20)},
+};
 
 void apply_pulse(float time) {
-    float pulse = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time);
+    float pulse1 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + PI_F/2 * 1);
+    float pulse2 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + PI_F/2 * 1.4);
+    float pulse3 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + PI_F/2 * 1.8);
+    float pulse4 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + PI_F/2 * 2.2);
+    float pulse5 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + PI_F/2 * 2.6);
+    float pulse6 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + PI_F/2 * 3.0);
+    float pulse7 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + PI_F/2 * 3.4);
 
-    // Apply the pulse to a small region in the grid (as a point source)
-    grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 + 0)].u = pulse;
+    grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 - 9)].u = pulse1;
+    grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 - 6)].u = pulse2;
+    grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 - 3)].u = pulse3;
+    grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 + 0)].u = pulse4;
+    grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 + 3)].u = pulse5;
+    grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 + 6)].u = pulse6;
+    grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 + 9)].u = pulse7;
 }
 
 struct RenderContext {
@@ -74,7 +73,7 @@ struct RenderContext {
 };
 
 float calculate_pressure(int x, int y, int k, float dt) {
-  float cfl_factor = pow((C * dt / DX), 2);
+  //float cfl_factor = pow((C * dt / DX), 2);
 
   float val =
       (1 / (1 + LF * (4 - k))) * ((2 - 0.5 * k) * grid[y][x].u +
@@ -82,7 +81,7 @@ float calculate_pressure(int x, int y, int k, float dt) {
                                          grid[y + 1][x].u + grid[y - 1][x].u) +
                                   (LF * (4 - k) - 1) * prev_grid[y][x].u);
 
-  val *= cfl_factor;
+  //val *= cfl_factor;
 
   return val;
 }
@@ -192,16 +191,8 @@ int main() {
   InitWindow(render.screenWidth, render.screenHeight, "Sonar simulation");
   SetTargetFPS(FPS);
 
-  std::vector<std::pair<int, int>> wall_line_list = {
-      {static_cast<int>(WIDTH / 2 - 7), static_cast<int>(HEIGHT - 20)},
-      {static_cast<int>(WIDTH / 2 - 5), static_cast<int>(HEIGHT - 10)},
-      {static_cast<int>(WIDTH / 2 - 5), static_cast<int>(HEIGHT + 0)},
-      {static_cast<int>(WIDTH / 2 + 5), static_cast<int>(HEIGHT + 0)},
-      {static_cast<int>(WIDTH / 2 + 5), static_cast<int>(HEIGHT - 10)},
-      {static_cast<int>(WIDTH / 2 + 7), static_cast<int>(HEIGHT - 20)},
-  };
 
-  set_wall_cells(grid, wall_line_list);
+  // set_wall_cells(grid, wall_line_list);
   prev_grid = grid;
   next_grid = grid;
 
@@ -240,6 +231,7 @@ int main() {
     float min_val;
     float max_val;
     find_min_max(min_val, max_val);
+    max_val = AMPLITUDE; // Temp override for testing
 
     BeginDrawing();
     ClearBackground(BLACK);
