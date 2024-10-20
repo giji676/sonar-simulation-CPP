@@ -12,8 +12,11 @@ const float REFL_COEF = 0.7; // Reflection coeficient
 const float G = (1 - REFL_COEF) / (1 + REFL_COEF);
 const float LF = 0.5 * sqrt(0.5) * G; // Loss factor
 const float C = 343; // Speed of sound constant
+const float PULSE_FREQ = 40000.0f; // Frequency in Hz (for example, 440Hz = A4 note)
+const int SIM_PER_FREQ = 10; // number of simulations that will get run per frequency
+const float AMPLITUDE = 2.0f;    // Amplitude of the pulse
 const int FPS = 60; // Actual FPS
-const int SIM_RATE = 10; // Used to get the simulation time step (dt) 
+const int SIM_RATE = PULSE_FREQ * 10; // Used to get the simulation time step (dt) 
 const float DT = 1.0 / SIM_RATE;
 // const float DX = C * DT * 1.01; // calculate the minimum and add 1% just in case
 const float DX = (C * DT)/(sqrt(0.5)); // calculate the minimum and add 1% just in case
@@ -22,8 +25,6 @@ const int WIDTH = 100; // Model assumes 100x100 represents 1m x 1m area irl
 const int HEIGHT = 100;
 const int PIXELS_PER_CELL = 6;
 
-const float PULSE_FREQ = 1.5f; // Frequency in Hz (for example, 440Hz = A4 note)
-const float AMPLITUDE = 2.0f;    // Amplitude of the pulse
 
 struct Cell {
   float u;
