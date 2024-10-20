@@ -12,8 +12,9 @@ const float REFL_COEF = 0.7; // Reflection coeficient
 const float G = (1 - REFL_COEF) / (1 + REFL_COEF);
 const float LF = 0.5 * sqrt(0.5) * G; // Loss factor
 const float C = 343; // Speed of sound constant
-const int FPS = 10;
-const float DT = 1.0 / FPS;
+const int FPS = 60; // Actual FPS
+const int SIM_RATE = 10; // Used to get the simulation time step (dt) 
+const float DT = 1.0 / SIM_RATE;
 // const float DX = C * DT * 1.01; // calculate the minimum and add 1% just in case
 const float DX = (C * DT)/(sqrt(0.5)); // calculate the minimum and add 1% just in case
                                 // // dt <= dx/C | dx >= C*dt ~~ 2.86
@@ -200,8 +201,7 @@ int main() {
   float time = 0.0;
 
   while (!WindowShouldClose()) {
-    float dt = GetFrameTime();
-    time += dt;
+    time += DT;
     apply_pulse(time);
 
     for (int y = 1; y < HEIGHT - 1; ++y) {
@@ -222,7 +222,7 @@ int main() {
           }
         }
         if (!grid[y][x].wall) {
-          float val = calculate_pressure(x, y, k, 1.0 / FPS);
+          float val = calculate_pressure(x, y, k, DT);
           next_grid[y][x].u = val;
         }
       }
