@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 #include <fstream>
+// 0.0010025
 
 const float PI_F = 3.14159265358979f;
 
@@ -40,30 +41,33 @@ std::vector<std::vector<Cell>> prev_grid;
 std::vector<std::vector<Cell>> next_grid;
 
 std::vector<std::pair<int, int>> wall_line_list = {
-    {static_cast<int>(WIDTH / 2 - 7), static_cast<int>(HEIGHT - 20)},
-    {static_cast<int>(WIDTH / 2 - 5), static_cast<int>(HEIGHT - 10)},
-    {static_cast<int>(WIDTH / 2 - 5), static_cast<int>(HEIGHT + 0)},
-    {static_cast<int>(WIDTH / 2 + 5), static_cast<int>(HEIGHT + 0)},
-    {static_cast<int>(WIDTH / 2 + 5), static_cast<int>(HEIGHT - 10)},
-    {static_cast<int>(WIDTH / 2 + 7), static_cast<int>(HEIGHT - 20)},
+  {static_cast<int>(WIDTH / 2 - 7), static_cast<int>(HEIGHT - 20)},
+  {static_cast<int>(WIDTH / 2 - 5), static_cast<int>(HEIGHT - 10)},
+  {static_cast<int>(WIDTH / 2 - 5), static_cast<int>(HEIGHT + 0)},
+  {static_cast<int>(WIDTH / 2 + 5), static_cast<int>(HEIGHT + 0)},
+  {static_cast<int>(WIDTH / 2 + 5), static_cast<int>(HEIGHT - 10)},
+  {static_cast<int>(WIDTH / 2 + 7), static_cast<int>(HEIGHT - 20)},
 };
 
 void apply_pulse(float time) {
-    float pulse1 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + PI_F/2 * 1);
-    float pulse2 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + PI_F/2 * 1.4);
-    float pulse3 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + PI_F/2 * 1.8);
-    float pulse4 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + PI_F/2 * 2.2);
-    float pulse5 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + PI_F/2 * 2.6);
-    float pulse6 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + PI_F/2 * 3.0);
-    float pulse7 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + PI_F/2 * 3.4);
+  std::cout << time << std::endl;
+  float delay_interval = time*1000;
 
-    grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 - 9)].u = pulse1;
-    grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 - 6)].u = pulse2;
-    grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 - 3)].u = pulse3;
-    grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 + 0)].u = pulse4;
-    grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 + 3)].u = pulse5;
-    grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 + 6)].u = pulse6;
-    grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 + 9)].u = pulse7;
+  float pulse1 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + PI_F/2 * 1+delay_interval*0);
+  float pulse2 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + PI_F/2 * 1+delay_interval*1);
+  float pulse3 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + PI_F/2 * 1+delay_interval*2);
+  float pulse4 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + PI_F/2 * 1+delay_interval*3);
+  float pulse5 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + PI_F/2 * 1+delay_interval*4);
+  float pulse6 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + PI_F/2 * 1+delay_interval*5);
+  float pulse7 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + PI_F/2 * 1+delay_interval*6);
+
+  grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 - 9)].u = pulse1;
+  grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 - 6)].u = pulse2;
+  grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 - 3)].u = pulse3;
+  grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 + 0)].u = pulse4;
+  grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 + 3)].u = pulse5;
+  grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 + 6)].u = pulse6;
+  grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 + 9)].u = pulse7;
 }
 
 float read_pressure(int x, int y) {
@@ -85,10 +89,10 @@ float calculate_pressure(int x, int y, int k, float dt) {
   //float cfl_factor = pow((C * dt / DX), 2);
 
   float val =
-      (1 / (1 + LF * (4 - k))) * ((2 - 0.5 * k) * grid[y][x].u +
-                                  0.5 * (grid[y][x + 1].u + grid[y][x - 1].u +
-                                         grid[y + 1][x].u + grid[y - 1][x].u) +
-                                  (LF * (4 - k) - 1) * prev_grid[y][x].u);
+    (1 / (1 + LF * (4 - k))) * ((2 - 0.5 * k) * grid[y][x].u +
+    0.5 * (grid[y][x + 1].u + grid[y][x - 1].u +
+    grid[y + 1][x].u + grid[y - 1][x].u) +
+    (LF * (4 - k) - 1) * prev_grid[y][x].u);
 
   //val *= cfl_factor;
 
@@ -250,7 +254,6 @@ int main() {
         sim_render.draw_cell(x, y, grid[y][x], color);
       }
     }
-    std::cout << read_pressure(50, 1) << std::endl;
     pressures.push_back(read_pressure(50, 1));
     EndDrawing();
     prev_grid = grid;
