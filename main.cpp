@@ -4,6 +4,7 @@
 #include <iostream>
 #include <utility>
 #include <vector>
+#include <fstream>
 
 const float PI_F = 3.14159265358979f;
 
@@ -25,6 +26,7 @@ const int WIDTH = 100; // Model assumes 100x100 represents 1m x 1m area irl
 const int HEIGHT = 100;
 const int PIXELS_PER_CELL = 6;
 
+std::vector<float> pressures;
 
 struct Cell {
   float u;
@@ -64,7 +66,12 @@ void apply_pulse(float time) {
     grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 + 9)].u = pulse7;
 }
 
-struct RenderContext {
+float read_pressure(int x, int y) {
+  float pressure = grid[y][x].u;
+  return pressure;
+}
+
+struct SimRender {
   const int screenWidth = WIDTH * PIXELS_PER_CELL;
   const int screenHeight = HEIGHT * PIXELS_PER_CELL;
 
@@ -188,9 +195,9 @@ void set_wall_cells(std::vector<std::vector<Cell>> &grid,
 }
 
 int main() {
-  RenderContext render;
+  SimRender sim_render;
 
-  InitWindow(render.screenWidth, render.screenHeight, "Sonar simulation");
+  InitWindow(sim_render.screenWidth, sim_render.screenHeight, "Sonar simulation");
   SetTargetFPS(FPS);
 
 
@@ -240,12 +247,25 @@ int main() {
     for (int y = 0; y < HEIGHT; ++y) {
       for (int x = 0; x < WIDTH; ++x) {
         Color color = get_color(grid[y][x], max_val);
-        render.draw_cell(x, y, grid[y][x], color);
+        sim_render.draw_cell(x, y, grid[y][x], color);
       }
     }
+    std::cout << read_pressure(50, 1) << std::endl;
+    pressures.push_back(read_pressure(50, 1));
     EndDrawing();
     prev_grid = grid;
     grid = next_grid;
+  }
+  std::ofstream outFile("output.txt");
+
+  // Check if the file is open
+  if (outFile.is_open()) {
+    for (const float& num : pressures) {
+      outFile << num << " ";  // Write each float followed by a space
+    }
+    outFile.close();  // Close the file
+  } else {
+    std::cerr << "Unable to open file for writing.\n";
   }
   CloseWindow();
   return 0;
