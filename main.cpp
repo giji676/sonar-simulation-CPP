@@ -23,9 +23,14 @@ const float DT = 1.0 / SIM_RATE;
 // const float DX = C * DT * 1.01; // calculate the minimum and add 1% just in case
 const float DX = (C * DT)/(sqrt(0.5)); // calculate the minimum and add 1% just in case
                                 // // dt <= dx/C | dx >= C*dt ~~ 2.86
-const int WIDTH = 100; // Model assumes 100x100 represents 1m x 1m area irl
-const int HEIGHT = 100;
-const int PIXELS_PER_CELL = 6;
+// Currently wave length ~~ 8.575mm
+// 1 pixel == wave_length/4
+const float WAVE_LENGTH = C/PULSE_FREQ;
+const float PIXEL_SCALE = PULSE_FREQ/4;
+const int WIDTH = 200; // Model assumes 100x100 represents 1m x 1m area irl
+const int HEIGHT = 200;
+const int PIXELS_PER_CELL = 3;
+const bool VISUAL_WALL = true;
 
 std::vector<float> pressures;
 
@@ -40,6 +45,7 @@ std::vector<std::vector<Cell>> grid(HEIGHT, std::vector<Cell>(WIDTH));
 std::vector<std::vector<Cell>> prev_grid;
 std::vector<std::vector<Cell>> next_grid;
 
+/*
 std::vector<std::pair<int, int>> wall_line_list = {
   {static_cast<int>(WIDTH / 2 - 7), static_cast<int>(HEIGHT - 20)},
   {static_cast<int>(WIDTH / 2 - 5), static_cast<int>(HEIGHT - 10)},
@@ -48,26 +54,58 @@ std::vector<std::pair<int, int>> wall_line_list = {
   {static_cast<int>(WIDTH / 2 + 5), static_cast<int>(HEIGHT - 10)},
   {static_cast<int>(WIDTH / 2 + 7), static_cast<int>(HEIGHT - 20)},
 };
+*/
 
-void apply_pulse(float time) {
-  std::cout << time << std::endl;
-  float delay_interval = time*1000;
+float deg2rad(float angle){
+  return angle * (PI_F / 180.0);
+}
 
-  float pulse1 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + PI_F/2 * 1+delay_interval*0);
-  float pulse2 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + PI_F/2 * 1+delay_interval*1);
-  float pulse3 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + PI_F/2 * 1+delay_interval*2);
-  float pulse4 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + PI_F/2 * 1+delay_interval*3);
-  float pulse5 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + PI_F/2 * 1+delay_interval*4);
-  float pulse6 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + PI_F/2 * 1+delay_interval*5);
-  float pulse7 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + PI_F/2 * 1+delay_interval*6);
+std::vector<std::pair<int, int>> wall_line_list = {
+  {static_cast<int>(WIDTH / 2), static_cast<int>(HEIGHT - 0)},
+  {static_cast<int>(WIDTH / 2 + WIDTH*std::cos(deg2rad(90-30))), static_cast<int>(HEIGHT - WIDTH*std::sin(deg2rad(90-30)))},
+  {static_cast<int>(WIDTH / 2), static_cast<int>(HEIGHT - 0)},
+  {static_cast<int>(WIDTH / 2 + WIDTH*std::cos(deg2rad(90-45))), static_cast<int>(HEIGHT - WIDTH*std::sin(deg2rad(90-45)))},
+  {static_cast<int>(WIDTH / 2), static_cast<int>(HEIGHT - 0)},
+  {static_cast<int>(WIDTH / 2 + WIDTH*std::cos(deg2rad(90-60))), static_cast<int>(HEIGHT - WIDTH*std::sin(deg2rad(90-60)))},
+  {static_cast<int>(WIDTH / 2), static_cast<int>(HEIGHT - 0)},
+  {static_cast<int>(WIDTH / 2 + WIDTH*std::cos(deg2rad(90))), static_cast<int>(HEIGHT - WIDTH*std::sin(deg2rad(90)))},
+  {static_cast<int>(WIDTH / 2), static_cast<int>(HEIGHT - 0)},
+  {static_cast<int>(WIDTH / 2 + WIDTH*std::cos(deg2rad(90+60))), static_cast<int>(HEIGHT - WIDTH*std::sin(deg2rad(90+60)))},
+  {static_cast<int>(WIDTH / 2), static_cast<int>(HEIGHT - 0)},
+  {static_cast<int>(WIDTH / 2 + WIDTH*std::cos(deg2rad(90+45))), static_cast<int>(HEIGHT - WIDTH*std::sin(deg2rad(90+45)))},
+  {static_cast<int>(WIDTH / 2), static_cast<int>(HEIGHT - 0)},
+  {static_cast<int>(WIDTH / 2 + WIDTH*std::cos(deg2rad(90+30))), static_cast<int>(HEIGHT - WIDTH*std::sin(deg2rad(90+30)))},
+};
 
-  grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 - 9)].u = pulse1;
-  grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 - 6)].u = pulse2;
-  grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 - 3)].u = pulse3;
-  grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 + 0)].u = pulse4;
-  grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 + 3)].u = pulse5;
-  grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 + 6)].u = pulse6;
-  grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 + 9)].u = pulse7;
+void apply_pulse(float time, float angle) {
+  angle = 45;
+  int antena_spacing = 2; // half a wavelength in pixels
+  //
+  float radian = deg2rad(angle);
+  //float phase_shift = (PI_F * std::sin(radian))/2;
+  float phase_shift = (2 * PI_F * (WAVE_LENGTH/2) * std::sin(radian))/WAVE_LENGTH/2;
+  std::cout << phase_shift << std::endl;
+  if (angle > 90) {
+    phase_shift *= -1;
+  }
+
+  // Apply cumulative phase shifts to pulses
+  float pulse1 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + phase_shift * 0);
+  float pulse2 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + phase_shift * 1);
+  float pulse3 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + phase_shift * 2);
+  float pulse4 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + phase_shift * 3);
+  float pulse5 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + phase_shift * 4);
+  float pulse6 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + phase_shift * 5);
+  float pulse7 = AMPLITUDE * std::sin(2 * PI_F * PULSE_FREQ * time + phase_shift * 6);
+
+  // Assign pulses to grid positions
+  grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 - antena_spacing * 3)].u = pulse1;
+  grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 - antena_spacing * 2)].u = pulse2;
+  grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 - antena_spacing * 1)].u = pulse3;
+  grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 + antena_spacing * 0)].u = pulse4;
+  grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 + antena_spacing * 1)].u = pulse5;
+  grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 + antena_spacing * 2)].u = pulse6;
+  grid[static_cast<int>(HEIGHT - 2)][static_cast<int>(WIDTH / 2 + antena_spacing * 3)].u = pulse7;
 }
 
 float read_pressure(int x, int y) {
@@ -86,15 +124,11 @@ struct SimRender {
 };
 
 float calculate_pressure(int x, int y, int k, float dt) {
-  //float cfl_factor = pow((C * dt / DX), 2);
-
   float val =
     (1 / (1 + LF * (4 - k))) * ((2 - 0.5 * k) * grid[y][x].u +
     0.5 * (grid[y][x + 1].u + grid[y][x - 1].u +
     grid[y + 1][x].u + grid[y - 1][x].u) +
     (LF * (4 - k) - 1) * prev_grid[y][x].u);
-
-  //val *= cfl_factor;
 
   return val;
 }
@@ -205,7 +239,7 @@ int main() {
   SetTargetFPS(FPS);
 
 
-  // set_wall_cells(grid, wall_line_list);
+  set_wall_cells(grid, wall_line_list); // Only visual no effect on wave rn
   prev_grid = grid;
   next_grid = grid;
 
@@ -214,7 +248,7 @@ int main() {
 
   while (!WindowShouldClose()) {
     time += DT;
-    apply_pulse(time);
+    apply_pulse(time, PI_F/3);
 
     for (int y = 1; y < HEIGHT - 1; ++y) {
       for (int x = 1; x < WIDTH - 1; ++x) {
@@ -230,10 +264,12 @@ int main() {
             {x + 1, y}, {x - 1, y}, {x, y + 1}, {x, y - 1}};
         for (const std::pair<int, int> neighbour_cell : neighbours_list) {
           if (grid[neighbour_cell.second][neighbour_cell.first].wall) {
-            k -= 1;
+            if (!VISUAL_WALL) {
+              k -= 1;
+            }
           }
         }
-        if (!grid[y][x].wall) {
+        if (!grid[y][x].wall || VISUAL_WALL) {
           float val = calculate_pressure(x, y, k, DT);
           next_grid[y][x].u = val;
         }
@@ -251,6 +287,9 @@ int main() {
     for (int y = 0; y < HEIGHT; ++y) {
       for (int x = 0; x < WIDTH; ++x) {
         Color color = get_color(grid[y][x], max_val);
+        if (grid[y][x].wall) {
+          color = WHITE;
+        }
         sim_render.draw_cell(x, y, grid[y][x], color);
       }
     }
