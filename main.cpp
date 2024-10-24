@@ -84,7 +84,6 @@ void apply_pulse(float time, float angle) {
   float radian = deg2rad(angle);
   //float phase_shift = (PI_F * std::sin(radian))/2;
   float phase_shift = (2 * PI_F * (WAVE_LENGTH/2) * std::sin(radian))/WAVE_LENGTH/2;
-  std::cout << phase_shift << std::endl;
   if (angle > 90) {
     phase_shift *= -1;
   }
@@ -113,11 +112,22 @@ float read_pressure(int x, int y) {
   return pressure;
 }
 
+void read_lobes(std::vector<float> &lobes_pressure) {
+  int r = 50;
+  for (int i = 0; i < 180; ++i) {
+    int x = WIDTH/2 - static_cast<int>(r*std::cos(deg2rad(i)));
+    int y = HEIGHT-2 - static_cast<int>(r*std::sin(deg2rad(i)));
+
+    float val = read_pressure(x, y);
+    lobes_pressure[i] = val;
+  }
+}
+
 struct SimRender {
   const int screenWidth = WIDTH * PIXELS_PER_CELL;
   const int screenHeight = HEIGHT * PIXELS_PER_CELL;
 
-  void draw_cell(int x, int y, Cell cell, Color color) {
+  void draw_cell(int x, int y, Color color) {
     DrawRectangle(x * PIXELS_PER_CELL, y * PIXELS_PER_CELL, PIXELS_PER_CELL,
                   PIXELS_PER_CELL, color);
   }
@@ -281,6 +291,9 @@ int main() {
     find_min_max(min_val, max_val);
     max_val = AMPLITUDE; // Temp override for testing
 
+    std::vector<float> lobes_pressure(180, 0.0);
+    read_lobes(lobes_pressure);
+
     BeginDrawing();
     ClearBackground(BLACK);
 
@@ -290,9 +303,13 @@ int main() {
         if (grid[y][x].wall) {
           color = WHITE;
         }
-        sim_render.draw_cell(x, y, grid[y][x], color);
+        sim_render.draw_cell(x, y, color);
       }
     }
+    for (int x = 0; x < lobes_pressure.size(); ++x) {
+      sim_render.draw_cell(x, HEIGHT-std::abs((lobes_pressure[x]*120)), WHITE);
+    }
+
     pressures.push_back(read_pressure(50, 1));
     EndDrawing();
     prev_grid = grid;
