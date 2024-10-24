@@ -78,6 +78,7 @@ std::vector<std::pair<int, int>> wall_line_list = {
 };
 
 void apply_pulse(float time, float angle) {
+  // WORKS UP TO 45 degrees
   angle = 45;
   int antena_spacing = 2; // half a wavelength in pixels
   //
@@ -130,6 +131,12 @@ struct SimRender {
   void draw_cell(int x, int y, Color color) {
     DrawRectangle(x * PIXELS_PER_CELL, y * PIXELS_PER_CELL, PIXELS_PER_CELL,
                   PIXELS_PER_CELL, color);
+  }
+  void draw_line(int x1, int y1, int x2, int y2, Color color) {
+    DrawLine(x1*PIXELS_PER_CELL, y1*PIXELS_PER_CELL, x2*PIXELS_PER_CELL, y2*PIXELS_PER_CELL, color);
+  }
+  void draw_circle(int x, int y, int r, Color color) {
+    DrawCircle(x*PIXELS_PER_CELL, y*PIXELS_PER_CELL, r*PIXELS_PER_CELL, color);
   }
 };
 
@@ -307,7 +314,10 @@ int main() {
       }
     }
     for (int x = 0; x < lobes_pressure.size(); ++x) {
-      sim_render.draw_cell(x, HEIGHT-std::abs((lobes_pressure[x]*120)), WHITE);
+      sim_render.draw_circle(x, HEIGHT-std::abs((lobes_pressure[x]*120)), 2, MAGENTA);
+    }
+    for (int x = 0; x <= 180/30; ++x) {
+      sim_render.draw_line(x*30, 0, x*30, HEIGHT, RED);
     }
 
     pressures.push_back(read_pressure(50, 1));
