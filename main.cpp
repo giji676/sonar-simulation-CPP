@@ -56,10 +56,11 @@ std::vector<std::pair<int, int>> wall_line_list = {
 };
 */
 
-float deg2rad(float angle){
+float deg2rad(float angle) {
   return angle * (PI_F / 180.0);
 }
 
+// TODO use raylib builtin DrawLine to draw walls instead of calculating each point
 std::vector<std::pair<int, int>> wall_line_list = {
   {static_cast<int>(WIDTH / 2), static_cast<int>(HEIGHT - 0)},
   {static_cast<int>(WIDTH / 2 + WIDTH*std::cos(deg2rad(90-30))), static_cast<int>(HEIGHT - WIDTH*std::sin(deg2rad(90-30)))},
@@ -114,6 +115,8 @@ float read_pressure(int x, int y) {
 }
 
 void read_lobes(std::vector<float> &lobes_pressure) {
+  // Read 180 points, for 180 degrees
+  // with r radius around the center bottom (pulse source)
   int r = 50;
   for (int i = 0; i < 180; ++i) {
     int x = WIDTH/2 - static_cast<int>(r*std::cos(deg2rad(i)));
@@ -129,14 +132,18 @@ struct SimRender {
   const int screenHeight = HEIGHT * PIXELS_PER_CELL;
 
   void draw_cell(int x, int y, Color color) {
-    DrawRectangle(x * PIXELS_PER_CELL, y * PIXELS_PER_CELL, PIXELS_PER_CELL,
-                  PIXELS_PER_CELL, color);
+    DrawRectangle(x * PIXELS_PER_CELL, y * PIXELS_PER_CELL,
+                  PIXELS_PER_CELL, PIXELS_PER_CELL,
+                  color);
   }
   void draw_line(int x1, int y1, int x2, int y2, Color color) {
-    DrawLine(x1*PIXELS_PER_CELL, y1*PIXELS_PER_CELL, x2*PIXELS_PER_CELL, y2*PIXELS_PER_CELL, color);
+    DrawLine(x1*PIXELS_PER_CELL, y1*PIXELS_PER_CELL,
+             x2*PIXELS_PER_CELL, y2*PIXELS_PER_CELL,
+             color);
   }
   void draw_circle(int x, int y, int r, Color color) {
-    DrawCircle(x*PIXELS_PER_CELL, y*PIXELS_PER_CELL, r*PIXELS_PER_CELL, color);
+    DrawCircle(x*PIXELS_PER_CELL, y*PIXELS_PER_CELL,
+               r*PIXELS_PER_CELL, color);
   }
 };
 
@@ -255,12 +262,11 @@ int main() {
   InitWindow(sim_render.screenWidth, sim_render.screenHeight, "Sonar simulation");
   SetTargetFPS(FPS);
 
-
   set_wall_cells(grid, wall_line_list); // Only visual no effect on wave rn
   prev_grid = grid;
   next_grid = grid;
 
-  //assign_initial_state();
+  // assign_initial_state();
   float time = 0.0;
 
   while (!WindowShouldClose()) {
