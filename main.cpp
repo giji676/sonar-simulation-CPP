@@ -17,8 +17,8 @@ const float C = 343; // Speed of sound constant
 const float PULSE_FREQ = 40000.0f; // Frequency in Hz (for example, 440Hz = A4 note)
 const int SIM_PER_FREQ = 10; // number of simulations that will get run per frequency
 const float AMPLITUDE = 2.0f;    // Amplitude of the pulse
-const int FPS = 60; // Actual FPS
-const int SIM_RATE = PULSE_FREQ * 10; // Used to get the simulation time step (dt) 
+const int FPS = 120; // Actual FPS
+const int SIM_RATE = PULSE_FREQ * SIM_PER_FREQ; // Used to get the simulation time step (dt) 
 const float DT = 1.0 / SIM_RATE;
 // const float DX = C * DT * 1.01; // calculate the minimum and add 1% just in case
 const float DX = (C * DT)/(sqrt(0.5)); // calculate the minimum and add 1% just in case
@@ -29,7 +29,7 @@ const float WAVE_LENGTH = C/PULSE_FREQ;
 const float PIXEL_SCALE = PULSE_FREQ/4;
 const int WIDTH = 200; // Model assumes 100x100 represents 1m x 1m area irl
 const int HEIGHT = 200;
-const int PIXELS_PER_CELL = 3;
+const int PIXELS_PER_CELL = 5;
 const bool VISUAL_WALL = true;
 
 std::vector<float> pressures;
@@ -80,7 +80,7 @@ std::vector<std::pair<int, int>> wall_line_list = {
 
 void apply_pulse(float time, float angle) {
   // WORKS UP TO 45 degrees
-  angle = 45;
+  angle = 30;
   int antena_spacing = 2; // half a wavelength in pixels
   //
   float radian = deg2rad(angle);
@@ -127,6 +127,15 @@ void read_lobes(std::vector<float> &lobes_pressure) {
   }
 }
 
+void compare_lobes_pressures(std::vector<float> &lobes_pressure1, std::vector<float> &lobes_pressure2) {
+  if (lobes_pressure1.size() != lobes_pressure2.size()) {
+    std::cout << "lobe pressure lists should be the same length" << std::endl;
+  }
+  for (int i = 0; i < lobes_pressure1.size(); ++i) {
+    lobes_pressure1[i] = std::max(std::fabs(lobes_pressure1[i]), std::fabs(lobes_pressure2[i]));
+  }
+}
+
 struct SimRender {
   const int screenWidth = WIDTH * PIXELS_PER_CELL;
   const int screenHeight = HEIGHT * PIXELS_PER_CELL;
@@ -157,7 +166,7 @@ float calculate_pressure(int x, int y, int k, float dt) {
   return val;
 }
 
-void find_min_max(float &min_val, float &max_val) {
+void find_min_max_2D_cell(float &min_val, float &max_val, const std::vector<std::vector<Cell>> grid) {
   min_val = std::numeric_limits<float>::max();
   max_val = std::numeric_limits<float>::min();
 
@@ -169,6 +178,27 @@ void find_min_max(float &min_val, float &max_val) {
       if (cell.u > max_val) {
         max_val = cell.u;
       }
+    }
+  }
+}
+
+void find_max(int &max_index, float &max_val, const std::vector<float> list) {
+  max_val = std::numeric_limits<float>::min();
+
+  for (int i = 0; i < list.size(); ++i) {
+    if (list[i] > max_val) {
+      max_val = list[i];
+      max_index = i;
+    }
+  }
+}
+
+int index_array(float val, const std::vector<float> list) {
+  for (int i = 0; i < list.size(); ++i) {
+    if (val == list[i]) {
+      return i;
+    } else {
+      return -1;
     }
   }
 }
@@ -268,10 +298,19 @@ int main() {
 
   // assign_initial_state();
   float time = 0.0;
+  int sample_index = 0;
+  std::vector<float> lobes_pressure_store(180, 0.0);
+  std::vector<float> lobes_pressure_read(180, 0.0);
+
+  float pulse_time = 1.0; // send a pules for 2 seconds and stop
+  float pulse_time_current = 0.0;
 
   while (!WindowShouldClose()) {
     time += DT;
-    apply_pulse(time, PI_F/3);
+    pulse_time_current += GetFrameTime();
+    if (pulse_time_current < pulse_time) {
+      apply_pulse(time, PI_F/3);
+    }
 
     for (int y = 1; y < HEIGHT - 1; ++y) {
       for (int x = 1; x < WIDTH - 1; ++x) {
@@ -301,11 +340,13 @@ int main() {
 
     float min_val;
     float max_val;
-    find_min_max(min_val, max_val);
+    find_min_max_2D_cell(min_val, max_val, grid);
     max_val = AMPLITUDE; // Temp override for testing
 
-    std::vector<float> lobes_pressure(180, 0.0);
-    read_lobes(lobes_pressure);
+    read_lobes(lobes_pressure_read);
+    sample_index++;
+    compare_lobes_pressures(lobes_pressure_store, lobes_pressure_read);
+
 
     BeginDrawing();
     ClearBackground(BLACK);
@@ -319,11 +360,19 @@ int main() {
         sim_render.draw_cell(x, y, color);
       }
     }
-    for (int x = 0; x < lobes_pressure.size(); ++x) {
-      sim_render.draw_circle(x, HEIGHT-std::abs((lobes_pressure[x]*120)), 2, MAGENTA);
+
+    for (int x = 0; x < lobes_pressure_store.size(); ++x) {
+      sim_render.draw_circle(x, HEIGHT-std::abs(lobes_pressure_store[x]*120),
+                             2, MAGENTA);
     }
+
     for (int x = 0; x <= 180/30; ++x) {
       sim_render.draw_line(x*30, 0, x*30, HEIGHT, RED);
+    }
+
+    if (sample_index == SIM_PER_FREQ) {
+      sample_index = 0;
+      std::fill(lobes_pressure_store.begin(), lobes_pressure_store.end(), 0.0);
     }
 
     pressures.push_back(read_pressure(50, 1));
